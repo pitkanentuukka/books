@@ -107,8 +107,6 @@ app.get('/books', async (req, res) => {
 
 app.get('/books/:id', async (req, res) => {
   if (req.params.id &&!isNaN(parseInt(req.params.id))){
-    console.log(req.params.id);
-
     db.get("select * from books where id = ?", req.params.id, function(err, row) {
       if (err) {
         console.log(err);
@@ -116,13 +114,25 @@ app.get('/books/:id', async (req, res) => {
       else if (row){
         res.status(200).json(row).end();
       } else if (!row) {
-        res.status(404).end();    
+        res.status(404).end();
       }
     })
-
   } else {
     res.status(404).end();
   }
+})
 
-
+app.delete('/books/:id', async (req, res) => {
+  if (req.params.id &&!isNaN(parseInt(req.params.id))) {
+    db.run("delete from books where id = ?", req.params.id, function (err) {
+      if (err) {
+      } else if (this.changes) {
+        res.status(204).end();
+      } else {
+        res.status(404).end();
+      }
+    })
+  } else {
+    res.status(404).end();
+  }
 })
