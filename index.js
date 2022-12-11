@@ -2,18 +2,26 @@ const express = require('express');
 const bodyparser = require('body-parser')
 
 const sqlite3 = require('sqlite3').verbose();
-let db = new sqlite3.Database('./books.db', (err) => {
+
+const db = new sqlite3.Database('./books.db', (err) => {
   if (err) {
-    // Cannot open database
     console.error(err.message)
     throw err
+  } else {
+    db.exec("CREATE TABLE IF NOT EXISTS books (\
+      id INTEGER PRIMARY KEY AUTOINCREMENT, \
+      title TEXT NOT NULL, \
+      author TEXT NOT NULL, \
+      year INT NOT NULL, \
+      publisher TEXT, \
+      description TEXT )"
+    );
   }
 });
 
 const app = express();
 app.use(bodyparser.json())
 app.listen(9000);
-// requests to handle
 
 /**
 * Post a book
@@ -25,17 +33,47 @@ app.listen(9000);
 */
 
 app.post('/books', async (req, res) => {
-  if (req.body.title && req.body.title instanceof string &&
-    req.body.author && req.body.author instanceof string &&
-    req.body.year && Number.isInteger(req.body.year)) {
-      // required fields are there, check for optional fields
 
+  if (req.body.title && typeof req.body.title === 'string' &&
+    req.body.author && typeof req.body.author === 'string' &&
+    req.body.year && Number.isInteger(req.body.year)) {
+
+    const title = req.body.title;
+    const author = req.body.author;
+    const year = req.body.year;
+    let publisher = "";
+    let description = "";
+
+    // required fields are there, check for optional fields
+    if (req.body.publisher && typeof req.body.publisher === 'string') {
+      publisher = req.body.publisher;
+    }
+    if (req.body.description && typeof req.body.description === 'string') {
+      description = req.body.description;
+    }
+    const sql = "INSERT INTO books (title, author, year, publisher, description) \
+        VALUES (?, ?, ?, ?, ?)";
+        try {
+          db.run(sql, [title, author, year, publisher, description], function (err) {
+            if (err) {
+              console.error("err: " + err);
+              res.status(500).json({error: 'insert failed'}).end();
+            } else {
+              const id = db.lastInsertRowId;
+              console.log(id);
+                  console.log(`A row has been inserted with rowid ${this.lastID}`);
+              res.status(200).json({id: `${this.lastID}`}).end();
+            }
+          });
+        } catch (e) {
+
+        } finally {
+
+        }
 
   } else {
     res.status(400).end();
   }
-
-
 })
 
 
@@ -60,12 +98,27 @@ app.get('/books', async (req, res) => {
   if (req.query.year && req.query.Number.isInteger(year)) {
     // add year clause
   }
+  const result = await db.get("SELECT * FROM books")
+  console.log(result);
+  res.status(200).json(result).end();
 
 
 })
 
 app.get('/books/:id', async (req, res) => {
-  if (req.params.id && Number.isInteger(req.params.id)){
+  if (req.params.id &&!isNaN(parseInt(req.params.id))){
+    console.log(req.params.id);
+
+    db.get("select * from books where id = ?", req.params.id, function(err, row) {
+      if (err) {
+        console.log(err);
+      }
+      else if (row){
+        res.status(200).json(row).end();
+      } else if (!row) {
+        res.status(404).end();    
+      }
+    })
 
   } else {
     res.status(404).end();
