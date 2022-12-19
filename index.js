@@ -75,7 +75,7 @@ app.post('/books', async (req, res) => {
 
     // let's see if this one exists yet
     if (await checkDuplicate(title, author, year)) {
-      res.status(400).end();
+      return res.status(400).end();
     } else {
 
       if (req.body.publisher && typeof req.body.publisher === 'string') {
@@ -89,21 +89,21 @@ app.post('/books', async (req, res) => {
           try {
             db.run(sql, [title, author, year, publisher, description], function (err) {
               if (err) {
-                res.status(500).json({error: 'insert failed'}).end();
+                return res.status(500).json({error: 'insert failed'}).end();
               } else {
                 const id = db.lastInsertRowId;
-                res.status(200).json({id: `${this.lastID}`}).end();
+                return res.status(200).json({id: `${this.lastID}`}).end();
               }
             });
           } catch (e) {
-            res.status(500).end();
+            return res.status(500).end();
 
           }
 
         }
 
   } else {
-    res.status(400).end();
+    return res.status(400).end();
   }
 })
 
@@ -126,7 +126,7 @@ app.get('/books', (req, res) => {
       sql += ' WHERE author = ?';
       params.push(req.query.author);
     } else {
-      res.status(400).end();
+      return res.status(400).end();
     }
   }
   if (req.query.hasOwnProperty('year')) {
@@ -140,7 +140,7 @@ app.get('/books', (req, res) => {
       }
       params.push(req.query.year);
     } else {
-      res.status(400).end();
+      return res.status(400).end();
     }
   }
   if (req.query.hasOwnProperty('publisher')) {
@@ -152,7 +152,7 @@ app.get('/books', (req, res) => {
         sql += ' WHERE publisher = ?';
       }
     } else {
-      res.status(400).end();
+      return res.status(400).end();
     }
     params.push(req.query.publisher);
   }
@@ -162,7 +162,7 @@ app.get('/books', (req, res) => {
     if (err) {
       console.log("err:" + err);
     } else {
-      res.status(200).send(rows).end();
+      return res.status(200).send(rows).end();
     }
   });
 });
@@ -174,13 +174,13 @@ app.get('/books/:id', async (req, res) => {
         console.log(err);
       }
       else if (row){
-        res.status(200).json(row).end();
+        return res.status(200).json(row).end();
       } else if (!row) {
-        res.status(404).end();
+        return res.status(404).end();
       }
     })
   } else {
-    res.status(404).end();
+    return res.status(404).end();
   }
 })
 
@@ -189,12 +189,12 @@ app.delete('/books/:id', async (req, res) => {
     db.run("delete from books where id = ?", req.params.id, function (err) {
       if (err) {
       } else if (this.changes) {
-        res.status(204).end();
+        return res.status(204).end();
       } else {
-        res.status(404).end();
+        return res.status(404).end();
       }
     })
   } else {
-    res.status(404).end();
+    return res.status(404).end();
   }
 })
