@@ -27,7 +27,6 @@ app.listen(9000);
 function isIntegerOrZeroDecimals(n) {
   // Check if the input is a number
   if (typeof n !== 'number') return false;
-
   // Check if the input has no decimals or the decimals are equal to 0
   return n % 1 === 0 || n % 1 === -0;
 }
@@ -65,7 +64,7 @@ app.post('/books', async (req, res) => {
 
   if (req.body.title && typeof req.body.title === 'string' &&
     req.body.author && typeof req.body.author === 'string' &&
-    req.body.year && isIntegerOrZeroDecimals(req.body.year)) {
+    req.body.year && isIntegerOrZeroDecimals(Number(req.body.year))) {
 
     const title = req.body.title;
     const author = req.body.author;
@@ -123,14 +122,14 @@ app.get('/books', (req, res) => {
 
   if (req.query.hasOwnProperty('author')) {
       if (typeof req.query.author === 'string') {
-      sql += ' WHERE author = ?';
-      params.push(req.query.author);
+      sql += ' WHERE LOWER(author) = ?';
+      params.push(req.query.author.toLowerCase());
     } else {
       return res.status(400).end();
     }
   }
   if (req.query.hasOwnProperty('year')) {
-    if (isIntegerOrZeroDecimals(req.query.year)){
+    if (isIntegerOrZeroDecimals(Number(req.query.year))){
 
       // check if the WHERE clause has already been added
       if (sql.includes('WHERE')) {
@@ -144,21 +143,22 @@ app.get('/books', (req, res) => {
     }
   }
   if (req.query.hasOwnProperty('publisher')) {
-    if (typeof req.body.publisher === 'string') {
+    if (typeof req.query.publisher === 'string') {
       // check if the WHERE clause has already been added
       if (sql.includes('WHERE')) {
-        sql += ' AND publisher = ?';
+        sql += ' AND LOWER(publisher) = ?';
       } else {
-        sql += ' WHERE publisher = ?';
+        sql += ' WHERE LOWER(publisher) = ?';
       }
     } else {
       return res.status(400).end();
     }
-    params.push(req.query.publisher);
+    params.push(req.query.publisher.toLowerCase());
   }
 
   // execute the query with the parameters
   db.all(sql, params, (err, rows) => {
+
     if (err) {
       console.log("err:" + err);
     } else {
@@ -168,7 +168,7 @@ app.get('/books', (req, res) => {
 });
 
 app.get('/books/:id', async (req, res) => {
-  if (req.params.id &&isIntegerOrZeroDecimals(req.params.id)){
+  if (req.params.id &&isIntegerOrZeroDecimals(Number(req.params.id))){
     db.get("select * from books where id = ?", req.params.id, function(err, row) {
       if (err) {
         console.log(err);
