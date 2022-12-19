@@ -23,6 +23,35 @@ const app = express();
 app.use(bodyparser.json())
 app.listen(9000);
 
+
+function isIntegerOrZeroDecimals(n) {
+  // Check if the input is a number
+  if (typeof n !== 'number') return false;
+
+  // Check if the input has no decimals or the decimals are equal to 0
+  return n % 1 === 0 || n % 1 === -0;
+}
+
+function checkDuplicate(title, author, year) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT * FROM books WHERE title = ? AND author = ? AND year = ?`;
+    // Execute the SELECT statement and retrieve the row
+    db.get(sql, [title, author, year], (err, row) => {
+      if (err) {
+        reject(err);
+      }
+
+      // Check the length of the returned row
+      if (row) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+  });
+}
+
+
 /**
 * Post a book
 * title: string
@@ -36,7 +65,7 @@ app.post('/books', async (req, res) => {
 
   if (req.body.title && typeof req.body.title === 'string' &&
     req.body.author && typeof req.body.author === 'string' &&
-    req.body.year && Number.isInteger(req.body.year)) {
+    req.body.year && isIntegerOrZeroDecimals(req.body.year)) {
 
     const title = req.body.title;
     const author = req.body.author;
@@ -44,30 +73,32 @@ app.post('/books', async (req, res) => {
     let publisher = "";
     let description = "";
 
-    // required fields are there, check for optional fields
-    if (req.body.publisher && typeof req.body.publisher === 'string') {
-      publisher = req.body.publisher;
-    }
-    if (req.body.description && typeof req.body.description === 'string') {
-      description = req.body.description;
-    }
-    const sql = "INSERT INTO books (title, author, year, publisher, description) \
-        VALUES (?, ?, ?, ?, ?)";
-        try {
-          db.run(sql, [title, author, year, publisher, description], function (err) {
-            if (err) {
-              console.error("err: " + err);
-              res.status(500).json({error: 'insert failed'}).end();
-            } else {
-              const id = db.lastInsertRowId;
-              console.log(id);
-                  console.log(`A row has been inserted with rowid ${this.lastID}`);
-              res.status(200).json({id: `${this.lastID}`}).end();
-            }
-          });
-        } catch (e) {
+    // let's see if this one exists yet
+    if (await checkDuplicate(title, author, year)) {
+      res.status(400).end();
+    } else {
 
-        } finally {
+      if (req.body.publisher && typeof req.body.publisher === 'string') {
+        publisher = req.body.publisher;
+      }
+      if (req.body.description && typeof req.body.description === 'string') {
+        description = req.body.description;
+      }
+      const sql = "INSERT INTO books (title, author, year, publisher, description) \
+          VALUES (?, ?, ?, ?, ?)";
+          try {
+            db.run(sql, [title, author, year, publisher, description], function (err) {
+              if (err) {
+                res.status(500).json({error: 'insert failed'}).end();
+              } else {
+                const id = db.lastInsertRowId;
+                res.status(200).json({id: `${this.lastID}`}).end();
+              }
+            });
+          } catch (e) {
+            res.status(500).end();
+
+          }
 
         }
 
@@ -91,7 +122,7 @@ app.get('/books', (req, res) => {
   let params = [];
 
   if (req.query.hasOwnProperty('author')) {
-    if (typeof req.body.author === 'string') {
+      if (typeof req.query.author === 'string') {
       sql += ' WHERE author = ?';
       params.push(req.query.author);
     } else {
@@ -99,7 +130,7 @@ app.get('/books', (req, res) => {
     }
   }
   if (req.query.hasOwnProperty('year')) {
-    if (Number.isInteger(req.query.year)){
+    if (isIntegerOrZeroDecimals(req.query.year)){
 
       // check if the WHERE clause has already been added
       if (sql.includes('WHERE')) {
@@ -113,7 +144,7 @@ app.get('/books', (req, res) => {
     }
   }
   if (req.query.hasOwnProperty('publisher')) {
-    if (typeof req.body.author === 'string') {
+    if (typeof req.body.publisher === 'string') {
       // check if the WHERE clause has already been added
       if (sql.includes('WHERE')) {
         sql += ' AND publisher = ?';
@@ -129,7 +160,7 @@ app.get('/books', (req, res) => {
   // execute the query with the parameters
   db.all(sql, params, (err, rows) => {
     if (err) {
-      // handle the error
+      console.log("err:" + err);
     } else {
       res.status(200).send(rows).end();
     }
@@ -137,7 +168,7 @@ app.get('/books', (req, res) => {
 });
 
 app.get('/books/:id', async (req, res) => {
-  if (req.params.id &&!isNaN(parseInt(req.params.id))){
+  if (req.params.id &&isIntegerOrZeroDecimals(req.params.id)){
     db.get("select * from books where id = ?", req.params.id, function(err, row) {
       if (err) {
         console.log(err);
@@ -154,7 +185,7 @@ app.get('/books/:id', async (req, res) => {
 })
 
 app.delete('/books/:id', async (req, res) => {
-  if (req.params.id &&!isNaN(parseInt(req.params.id))) {
+  if (req.params.id &&!isIntegerOrZeroDecimals(req.params.id)) {
     db.run("delete from books where id = ?", req.params.id, function (err) {
       if (err) {
       } else if (this.changes) {
