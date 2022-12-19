@@ -86,24 +86,55 @@ app.post('/books', async (req, res) => {
 * year: int
 * publisher: string
 **/
+app.get('/books', (req, res) => {
+  let sql = 'SELECT * FROM books';
+  let params = [];
 
-app.get('/books', async (req, res) => {
-
-  if (req.query.author && req.query.author instanceof string) {
-    // add author clause
+  if (req.query.hasOwnProperty('author')) {
+    if (typeof req.body.author === 'string') {
+      sql += ' WHERE author = ?';
+      params.push(req.query.author);
+    } else {
+      res.status(400).end();
+    }
   }
-  if (req.query.publisher && req.query.publisher instanceof string) {
-    // add publisher clause
-  }
-  if (req.query.year && req.query.Number.isInteger(year)) {
-    // add year clause
-  }
-  const result = await db.get("SELECT * FROM books")
-  console.log(result);
-  res.status(200).json(result).end();
+  if (req.query.hasOwnProperty('year')) {
+    if (Number.isInteger(req.query.year)){
 
+      // check if the WHERE clause has already been added
+      if (sql.includes('WHERE')) {
+        sql += ' AND year = ?';
+      } else {
+        sql += ' WHERE year = ?';
+      }
+      params.push(req.query.year);
+    } else {
+      res.status(400).end();
+    }
+  }
+  if (req.query.hasOwnProperty('publisher')) {
+    if (typeof req.body.author === 'string') {
+      // check if the WHERE clause has already been added
+      if (sql.includes('WHERE')) {
+        sql += ' AND publisher = ?';
+      } else {
+        sql += ' WHERE publisher = ?';
+      }
+    } else {
+      res.status(400).end();
+    }
+    params.push(req.query.publisher);
+  }
 
-})
+  // execute the query with the parameters
+  db.all(sql, params, (err, rows) => {
+    if (err) {
+      // handle the error
+    } else {
+      res.status(200).send(rows).end();
+    }
+  });
+});
 
 app.get('/books/:id', async (req, res) => {
   if (req.params.id &&!isNaN(parseInt(req.params.id))){
