@@ -20,6 +20,7 @@ exports.checkDuplicate = async  (title, author, year) => {
     // Execute the SELECT statement and retrieve the row
     db.get(sql, [title, author, year], (err, row) => {
       if (err) {
+        console.log(err);
         reject(err);
       }
       // Check the length of the returned row
@@ -63,7 +64,7 @@ exports.getABook = async (id) => {
   });
 };
 
-exports.deleteABook = async (id) => {
+exports.deleteBook = async (id) => {
   return new Promise((resolve, reject) => {
     db.run("delete from books where id = ?", id, function (err) {
       if (err) {
@@ -102,7 +103,6 @@ exports.getBooks = async (params) => {
           console.log(err);
           reject(err);
         } else {
-          console.log(rows);
           resolve (rows);
         }
       });

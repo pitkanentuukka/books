@@ -38,8 +38,6 @@ app.post('/books', async (req, res) => {
       // the return statement is there to prevent "headers already sent" error
       return res.status(400).end();
     } else {
-
-
       if (req.body.publisher && typeof req.body.publisher === 'string') {
         publisher = req.body.publisher;
       }
@@ -60,15 +58,11 @@ app.post('/books', async (req, res) => {
       } catch (e) {
         return res.status(500).json(e).end();
       }
-
     }
   } else {
     return res.status(400).end();
   }
 })
-
-
-
 
 /**
 * Get all books
@@ -110,8 +104,12 @@ app.get('/books', async (req, res) => {
   }
 });
 
+/**
+* get a book by id
+* returns either a single book or 404
+*/
 app.get('/books/:id', async (req, res) => {
-  if (req.params.id &&isIntegerOrZeroDecimals(Number(req.params.id))){
+  if (req.params.id && isIntegerOrZeroDecimals(Number(req.params.id))){
     const book = await db.getABook(req.params.id);
     if (book) {
       return res.status(200).json(book).end();
@@ -123,9 +121,13 @@ app.get('/books/:id', async (req, res) => {
   }
 })
 
+/**
+* delete a book
+* takes id, returns 204 on success and 404 if no book is found
+*/
 app.delete('/books/:id', async (req, res) => {
-  if (req.params.id &&isIntegerOrZeroDecimals(Number(req.params.id))) {
-    if (await db.deleteABook(req.params.id)) {
+  if (req.params.id && isIntegerOrZeroDecimals(Number(req.params.id))) {
+    if (await db.deleteBook(req.params.id)) {
       return res.status(204).end();
     } else {
       return res.status(404).end();
@@ -133,4 +135,4 @@ app.delete('/books/:id', async (req, res) => {
   } else {
     return res.status(404).end();
   }
-})
+});
