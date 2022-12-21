@@ -6,7 +6,6 @@ const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('./books.db', (err) => {
   if (err) {
     console.error(err.message)
-    throw err
   } else {
     db.exec("CREATE TABLE IF NOT EXISTS books (\
       id INTEGER PRIMARY KEY AUTOINCREMENT, \
@@ -25,7 +24,6 @@ app.listen(9000);
 
 
 function isIntegerOrZeroDecimals(n) {
-  // Check if the input is a number
   if (typeof n !== 'number') return false;
   // Check if the input has no decimals or the decimals are equal to 0
   return n % 1 === 0 || n % 1 === -0;
@@ -62,9 +60,9 @@ function checkDuplicate(title, author, year) {
 
 app.post('/books', async (req, res) => {
 
-  if (req.body.title && typeof req.body.title === 'string' &&
-    req.body.author && typeof req.body.author === 'string' &&
-    req.body.year && isIntegerOrZeroDecimals(Number(req.body.year))) {
+  if (req.body.hasOwnProperty('title') && typeof req.body.title === 'string' &&
+    req.body.hasOwnProperty('author') && typeof req.body.author === 'string' &&
+    req.body.hasOwnProperty('year') && isIntegerOrZeroDecimals(Number(req.body.year))) {
 
     const title = req.body.title;
     const author = req.body.author;
@@ -74,33 +72,31 @@ app.post('/books', async (req, res) => {
 
     // let's see if this one exists yet
     if (await checkDuplicate(title, author, year)) {
+      // the return statement is there to prevent "headers already sent" error
       return res.status(400).end();
     } else {
 
-      if (req.body.publisher && typeof req.body.publisher === 'string') {
+      if (req.body.hasOwnProperty('publisher') && typeof req.body.publisher === 'string') {
         publisher = req.body.publisher;
       }
-      if (req.body.description && typeof req.body.description === 'string') {
+      if (req.body.hasOwnProperty('description') && typeof req.body.description === 'string') {
         description = req.body.description;
       }
       const sql = "INSERT INTO books (title, author, year, publisher, description) \
-          VALUES (?, ?, ?, ?, ?)";
-          try {
-            db.run(sql, [title, author, year, publisher, description], function (err) {
-              if (err) {
-                return res.status(500).json({error: 'insert failed'}).end();
-              } else {
-                const id = db.lastInsertRowId;
-                return res.status(200).json({id: `${this.lastID}`}).end();
-              }
-            });
-          } catch (e) {
+        VALUES (?, ?, ?, ?, ?)";
+      try {
+        db.run(sql, [title, author, year, publisher, description], function (err) {
+          if (err) {
             return res.status(500).end();
-
+          } else {
+            const id = db.lastInsertRowId;
+            return res.status(200).json({id: `${this.lastID}`}).end();
           }
-
-        }
-
+        });
+      } catch (e) {
+        return res.status(500).end();
+      }
+    }
   } else {
     return res.status(400).end();
   }
@@ -160,7 +156,7 @@ app.get('/books', (req, res) => {
   db.all(sql, params, (err, rows) => {
 
     if (err) {
-      console.log("err:" + err);
+      return res.status(500).end();
     } else {
       return res.status(200).send(rows).end();
     }
@@ -168,10 +164,11 @@ app.get('/books', (req, res) => {
 });
 
 app.get('/books/:id', async (req, res) => {
-  if (req.params.id &&isIntegerOrZeroDecimals(Number(req.params.id))){
+  if (req.params.hasOwnProperty('id') &&isIntegerOrZeroDecimals(Number(req.params.id))){
     db.get("select * from books where id = ?", req.params.id, function(err, row) {
       if (err) {
         console.log(err);
+        return res.status(500).end();
       }
       else if (row){
         return res.status(200).json(row).end();
@@ -185,9 +182,10 @@ app.get('/books/:id', async (req, res) => {
 })
 
 app.delete('/books/:id', async (req, res) => {
-  if (req.params.id &&!isIntegerOrZeroDecimals(req.params.id)) {
+  if (req.params.hasOwnProperty('id') &&!isIntegerOrZeroDecimals(req.params.id)) {
     db.run("delete from books where id = ?", req.params.id, function (err) {
       if (err) {
+        return res.status(500).end();
       } else if (this.changes) {
         return res.status(204).end();
       } else {
